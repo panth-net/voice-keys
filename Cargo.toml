@@ -31,7 +31,7 @@ tao = "0.34"
 tray-icon = "0.21"
 # "transparent" is not a default feature, and without it WebViewBuilder::with_transparent
 # is a silent no-op — which leaves the webview opaque and hides the rounded corners.
-wry = { version = "0.54", features = ["transparent"] }
+wry = { version = "0.55", features = ["transparent"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
