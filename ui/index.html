@@ -1,0 +1,720 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>Voice Keys</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <!-- Carries the app's rounded corners. It has to be a real element, not <body>:
+       body's background would propagate to the canvas and paint square. -->
+  <div class="app-shell">
+  <div class="drag-strip" aria-label="Drag window">
+    <span class="drag-dots">...</span>
+    <div class="window-controls" aria-label="Window controls">
+      <button class="window-control" title="Minimize" onclick="minimizeWindow()">-</button>
+      <button class="window-control" title="Maximize / Restore" onclick="toggleMaximizeWindow()">&#9633;</button>
+      <button class="window-control close" title="Close" onclick="closeWindow()">&times;</button>
+    </div>
+  </div>
+  <div class="header-row">
+    <div>
+      <h1 class="app-title">Voice Dictation</h1>
+    </div>
+  </div>
+
+  <div id="statusBanner" class="status-banner" hidden>
+    <span id="statusBannerText"></span>
+  </div>
+
+  <section class="ui-group ui-group-first">
+    <div class="settings-label-row" style="margin-top:0">
+      <label for="apiKey">deepgram api key</label>
+      <button type="button" class="text-link-btn" onclick="showApiKeyHelp()">What's this?</button>
+    </div>
+    <div class="input-icon-wrap">
+      <input id="apiKey" type="password" value="{{API_KEY}}" placeholder="dg_..." />
+      <button type="button" class="input-icon-btn" onclick="toggleApiKeyVisibility()" title="Show / hide key" aria-label="Toggle API key visibility">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line id="eyeSlash" x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
+    <div class="settings-label-row">
+      <label for="languageCode">language code</label>
+      <div class="settings-label-row-end">
+        <button type="button" class="text-link-btn" onclick="copyLanguageCodesLink()">Copy all language codes URL</button>
+        <!-- Custom dropdown rather than <select>: WKWebView renders a native
+             popup for <select> and ignores option styling. -->
+        <div id="modelSelect" class="dropdown">
+          <button id="modelSelectBtn" type="button" class="dropdown-trigger" aria-haspopup="listbox"
+                  aria-expanded="false" aria-label="Speech model" onclick="toggleModelMenu()">
+            <span id="modelSelectValue">{{MODEL}}</span>
+            <svg class="dropdown-caret" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div id="modelSelectMenu" class="dropdown-menu" role="listbox" aria-label="Speech model" hidden>
+            <button type="button" class="dropdown-option" role="option" data-value="nova-3" onclick="pickModel('nova-3')">
+              <span class="dropdown-option-name">nova-3</span>
+              <span class="dropdown-option-note">better accuracy · multilingual</span>
+            </button>
+            <button type="button" class="dropdown-option" role="option" data-value="nova-2" onclick="pickModel('nova-2')">
+              <span class="dropdown-option-name">nova-2</span>
+              <span class="dropdown-option-note">45% cheaper · english-heavy</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <input id="languageCode" type="text" value="{{LANGUAGE}}" placeholder="en" />
+    <p class="hint">Use a single language code like <code>en</code> or use <code>multi</code> for multilingual.</p>
+    <p id="modelLockHint" class="hint model-lock-hint" hidden>Only <code>nova-3</code> supports <code>multi</code>, so the dropdown locks while it's set.</p>
+
+    <label for="maxRecordingMinutes">auto-stop cap (minutes)</label>
+    <input id="maxRecordingMinutes" type="text" inputmode="numeric" pattern="[0-9]*" value="{{MAX_RECORDING_MINUTES}}" placeholder="20" />
+    <p class="hint">Recording auto-stops and starts transcription when this cap is reached.</p>
+
+    <div class="row">
+      <button style="flex:0 0 calc(64% - 6px)" onclick="saveApiKey()">Save settings</button>
+      <button class="ghost" style="flex:0 0 calc(36% - 6px)" onclick="quitApp()">Quit app</button>
+    </div>
+  </section>
+
+  <details id="deepgramUsageAccordion" class="ui-group">
+    <summary>Deepgram usage</summary>
+    <div class="usage-card-header">
+      <p class="hint usage-admin-hint">Usage stats require a Deepgram <strong>Admin-level</strong> API key.</p>
+      <button id="refreshUsageBtn" type="button" class="ghost usage-refresh-btn" onclick="refreshDeepgramUsage(false)">Refresh</button>
+    </div>
+    <p id="usagePeriod" class="hint">Period: --</p>
+    <div class="usage-stats-grid">
+      <div class="usage-stat">
+        <span class="usage-stat-label">Used (month-to-date)</span>
+        <strong id="usageMinutesValue">--</strong>
+      </div>
+      <div class="usage-stat">
+        <span class="usage-stat-label">Requests (month-to-date)</span>
+        <strong id="usageRequestsValue">--</strong>
+      </div>
+      <div class="usage-stat">
+        <span class="usage-stat-label">Spend (month-to-date)</span>
+        <strong id="usageSpendValue">--</strong>
+      </div>
+      <div class="usage-stat">
+        <span class="usage-stat-label">Balance remaining</span>
+        <strong id="usageBalanceValue">--</strong>
+      </div>
+    </div>
+    <p id="usageNote" class="hint usage-note" hidden></p>
+    <p id="usageError" class="hint usage-error" hidden></p>
+    <div class="usage-more-row">
+      <button id="usageMoreBtn" type="button" class="text-link-btn subtle" onclick="toggleUsageHistory()">See even more</button>
+    </div>
+    <div id="usageHistory" hidden>
+      <p id="usageHistoryRange" class="hint usage-history-range">Loading all-time usage...</p>
+      <div class="usage-stats-grid usage-stats-grid-3">
+        <div class="usage-stat">
+          <span class="usage-stat-label">Used (all time)</span>
+          <strong id="usageAllTimeMinutes">--</strong>
+        </div>
+        <div class="usage-stat">
+          <span class="usage-stat-label">Requests (all time)</span>
+          <strong id="usageAllTimeRequests">--</strong>
+        </div>
+        <div class="usage-stat">
+          <span class="usage-stat-label">Spend (all time)</span>
+          <strong id="usageAllTimeSpend">--</strong>
+        </div>
+      </div>
+      <p id="usageChartPeak" class="hint usage-chart-peak" hidden></p>
+      <div id="usageChartWrap" class="usage-chart-wrap" hidden>
+        <div class="usage-chart-scroll">
+          <div class="usage-chart-inner">
+            <div id="usageChart" class="usage-chart"></div>
+            <div id="usageChartAxis" class="usage-chart-axis"></div>
+          </div>
+        </div>
+        <div id="usageChartTooltip" class="usage-chart-tooltip" hidden></div>
+      </div>
+      <p id="usageHistoryEmpty" class="hint" hidden>No usage recorded yet.</p>
+      <p id="usageHistoryNote" class="hint usage-note" hidden></p>
+      <p id="usageHistoryError" class="hint usage-error" hidden></p>
+    </div>
+  </details>
+
+  <div id="statusToast" role="status" aria-live="polite"></div>
+
+  <details id="hotkeysAccordion" class="ui-group">
+    <summary>Hotkeys</summary>
+    <p class="hint">Each mode uses two keys. Hold Key 1 and press Key 2 to start recording. Press the same combo again to stop.</p>
+    <div class="hotkey-label-row">
+      <label>Paste mode</label>
+      <button id="toggleHotkeyGuideBtn" type="button" class="text-link-btn" onclick="toggleHotkeyGuide()">View valid key names</button>
+    </div>
+    <div class="row compact">
+      <div class="field-col">
+        <label for="pasteModifierKey">Key 1 (hold)</label>
+        <input id="pasteModifierKey" type="text" value="{{PASTE_MODIFIER}}" placeholder="alt" />
+      </div>
+      <div class="field-col">
+        <label for="pasteTriggerKey">Key 2</label>
+        <input id="pasteTriggerKey" type="text" value="{{PASTE_TRIGGER}}" placeholder="dot" />
+      </div>
+    </div>
+    <label>Clipboard mode</label>
+    <div class="row compact">
+      <div class="field-col">
+        <label for="clipboardModifierKey">Key 1 (hold)</label>
+        <input id="clipboardModifierKey" type="text" value="{{CLIPBOARD_MODIFIER}}" placeholder="alt" />
+      </div>
+      <div class="field-col">
+        <label for="clipboardTriggerKey">Key 2</label>
+        <input id="clipboardTriggerKey" type="text" value="{{CLIPBOARD_TRIGGER}}" placeholder="slash" />
+      </div>
+    </div>
+    <div id="hotkeyGuide" class="hotkey-guide" hidden>
+      <p><strong>How it works</strong>: Hold Key 1 and press Key 2 to start recording. Press the same combo again to stop.</p>
+      <p><strong>Tip</strong>: "Green text" is what you use in the hotkeys.</p>
+      <p><strong>Modifier keys (Key 1)</strong> &mdash; left and right side both work:</p>
+      <ul>
+        <li><code>cmd</code> &mdash; Command key on Mac, Windows key on Windows.</li>
+        <li><code>ctrl</code> &mdash; Control key on both Mac and Windows.</li>
+        <li><code>shift</code> &mdash; Shift key on both Mac and Windows.</li>
+        <li><code>option</code> &mdash; Option key on Mac, Alt key on Windows.</li>
+      </ul>
+      <p><strong>Trigger keys (Key 2)</strong>:</p>
+      <ul>
+        <li>Letters: <code>a</code> through <code>z</code>.</li>
+        <li>Numbers: <code>0</code> through <code>9</code>.</li>
+        <li>Function keys: <code>f1</code> through <code>f12</code>.</li>
+        <li>Common: <code>space</code>, <code>tab</code>, <code>enter</code>, <code>backspace</code>, <code>escape</code>, <code>capslock</code>.</li>
+        <li>Symbols: <code>minus</code> (-), <code>equal</code> (=), <code>tilde</code> (`), <code>leftbracket</code> ([), <code>rightbracket</code> (]), <code>semicolon</code> (;), <code>quote</code> ('), <code>backslash</code> (\), <code>comma</code> (,), <code>dot</code> (.), <code>slash</code> (/).</li>
+      </ul>
+    </div>
+  </details>
+  <div id="saveHotkeysBar" class="fixed-bottom-bar" hidden>
+    <button onclick="saveHotkeys()">Save hotkeys</button>
+  </div>
+
+  <details id="setupAccordion" class="ui-group">
+    <summary>Permissions setup (macOS + Windows)</summary>
+    <p><strong>macOS</strong> &mdash; Click each button, then allow Voice Keys (or voicekeys):</p>
+    <div class="row compact" style="margin-bottom:8px">
+      <button class="ghost" style="flex:1" onclick="openMacSetting('accessibility')">Open Accessibility</button>
+      <button class="ghost" style="flex:1" onclick="openMacSetting('input_monitoring')">Open Input Monitoring</button>
+      <button class="ghost" style="flex:1" onclick="openMacSetting('microphone')">Open Microphone</button>
+    </div>
+    <ul>
+      <li>In each of these 3 macOS sections, turn <strong>Voice Keys</strong> (or <strong>voicekeys</strong>) <strong>ON</strong>: <strong>Accessibility</strong>, <strong>Input Monitoring</strong>, and <strong>Microphone</strong>.</li>
+      <li>If you started Voice Keys from Terminal or VS Code, turn that app ON in the same section too.</li>
+      <li>After changing permissions, fully quit and reopen Voice Keys.</li>
+    </ul>
+    <p><strong>Windows 11</strong>:</p>
+    <ul>
+      <li>Go to <code>Settings &gt; Privacy &amp; security &gt; Microphone</code>.</li>
+      <li>Turn on <code>Microphone access</code> and <code>Let desktop apps access your microphone</code>.</li>
+      <li>Fully quit and reopen Voice Keys.</li>
+    </ul>
+    <p><strong>Windows – pin tray icon to taskbar</strong>:</p>
+    <ul>
+      <li>By default Windows hides the tray icon behind the <strong>^</strong> arrow.</li>
+      <li>Go to <code>Settings &gt; Personalization &gt; Taskbar &gt; Other system tray icons</code> and toggle <strong>voicekeys.exe</strong> on.</li>
+    </ul>
+  </details>
+
+  <div id="logLinesRow" class="row ui-group">
+    <button class="ghost" style="flex:1" onclick="copyTranscripts()">Copy last 50 messages</button>
+    <button class="ghost" style="flex:1" onclick="copyLastMessage()">Copy last message</button>
+  </div>
+
+  <footer class="ui-group">
+    <span>From <a href="javascript:void(0)" onclick="openNoPasaNada(event)">No pasa nada apps</a></span>
+    <button type="button" class="text-link-btn subtle" onclick="openLogFile()">Copy last 500 log lines</button>
+  </footer>
+  </div><!-- /.app-shell -->
+
+  <script>
+    function post(message) { window.ipc.postMessage(JSON.stringify(message)); }
+    function setUsageLoading(loading) {
+      const refreshBtn = document.getElementById("refreshUsageBtn");
+      refreshBtn.disabled = loading;
+      refreshBtn.textContent = loading ? "Refreshing..." : "Refresh";
+    }
+    function setUsageValues(values) {
+      document.getElementById("usagePeriod").textContent = values.period;
+      document.getElementById("usageMinutesValue").textContent = values.minutes_used;
+      document.getElementById("usageRequestsValue").textContent = values.requests;
+      document.getElementById("usageSpendValue").textContent = values.spend;
+      document.getElementById("usageBalanceValue").textContent = values.balance;
+    }
+    function showUsageError(message) {
+      const usageError = document.getElementById("usageError");
+      usageError.textContent = message;
+      usageError.hidden = false;
+    }
+    function hideUsageError() {
+      const usageError = document.getElementById("usageError");
+      usageError.hidden = true;
+      usageError.textContent = "";
+    }
+    function showUsageNote(message) {
+      const usageNote = document.getElementById("usageNote");
+      if (!message) {
+        usageNote.hidden = true;
+        usageNote.textContent = "";
+        return;
+      }
+      usageNote.textContent = message;
+      usageNote.hidden = false;
+    }
+    function refreshDeepgramUsage(withStatusToast) {
+      setUsageLoading(true);
+      hideUsageError();
+      post({ cmd: "refresh_usage" });
+      if (withStatusToast) {
+        setStatus("Refreshing Deepgram usage...", "ok");
+      }
+    }
+    // ── All-time usage ("See even more") ──
+    // Fetched lazily on first expand: it costs two wide Deepgram range queries.
+    let usageHistoryRequested = false;
+    let usageChartMonths = [];
+    let usageChartActiveIndex = null;
+
+    function toggleUsageHistory() {
+      const panel = document.getElementById("usageHistory");
+      const btn = document.getElementById("usageMoreBtn");
+      const wasOpen = !panel.hidden;
+      panel.hidden = wasOpen;
+      btn.textContent = wasOpen ? "See even more" : "See less";
+      if (wasOpen) {
+        hideChartTooltip();
+        return;
+      }
+      if (!usageHistoryRequested) {
+        usageHistoryRequested = true;
+        post({ cmd: "refresh_usage_history" });
+      }
+    }
+
+    function renderUsageChart(months) {
+      const chart = document.getElementById("usageChart");
+      const axis = document.getElementById("usageChartAxis");
+      const wrap = document.getElementById("usageChartWrap");
+      const empty = document.getElementById("usageHistoryEmpty");
+      const peak = document.getElementById("usageChartPeak");
+
+      hideChartTooltip();
+      chart.textContent = "";
+      axis.textContent = "";
+      usageChartMonths = months;
+
+      if (!months.length) {
+        wrap.hidden = true;
+        peak.hidden = true;
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      wrap.hidden = false;
+
+      let max = 0;
+      let peakMonth = months[0];
+      months.forEach((m) => {
+        const value = Number(m.minutes) || 0;
+        if (value > max) { max = value; peakMonth = m; }
+      });
+
+      // Names the scale so the reader has a reference without a number on every bar.
+      peak.textContent = max > 0
+        ? "Peak: " + peakMonth.minutes_label + " in " + peakMonth.label + ". Hover a bar for that month."
+        : "No billable minutes recorded in this range.";
+      peak.hidden = false;
+
+      months.forEach((m, idx) => {
+        const value = Number(m.minutes) || 0;
+
+        // The full-height track is the hit target, so short bars stay hoverable.
+        const track = document.createElement("div");
+        track.className = "usage-bar-track";
+        track.dataset.index = String(idx);
+        track.tabIndex = 0;
+        track.setAttribute("role", "img");
+        track.setAttribute("aria-label",
+          m.label + ": " + m.minutes_label + ", " + m.requests_label + ", " + m.spend_label);
+
+        const bar = document.createElement("div");
+        bar.className = value > 0 ? "usage-bar" : "usage-bar empty";
+        // Months with no usage keep a stub so a gap reads as "nothing used",
+        // not as missing data.
+        bar.style.height = max > 0 && value > 0
+          ? Math.max(2, Math.round((value / max) * 100)) + "%"
+          : "2px";
+        track.appendChild(bar);
+        chart.appendChild(track);
+
+        const label = document.createElement("div");
+        label.className = "usage-bar-label";
+        const monthSpan = document.createElement("span");
+        monthSpan.textContent = m.axis_label || "";
+        label.appendChild(monthSpan);
+        // Year only where it changes — 24px columns have no room to repeat it.
+        const year = String(m.label || "").split(" ").pop();
+        const prevYear = idx > 0 ? String(months[idx - 1].label || "").split(" ").pop() : null;
+        if (idx === 0 || year !== prevYear) {
+          const yearSpan = document.createElement("span");
+          yearSpan.className = "usage-bar-year";
+          yearSpan.textContent = year;
+          label.appendChild(yearSpan);
+        }
+        axis.appendChild(label);
+      });
+    }
+
+    function showChartTooltip(track) {
+      const idx = Number(track.dataset.index);
+      const month = usageChartMonths[idx];
+      if (!month) return;
+      if (usageChartActiveIndex === idx) return;
+
+      const tip = document.getElementById("usageChartTooltip");
+      const wrap = document.getElementById("usageChartWrap");
+      clearChartActive();
+      usageChartActiveIndex = idx;
+      track.classList.add("active");
+
+      // textContent throughout: these strings come back from the Deepgram API.
+      tip.textContent = "";
+      const head = document.createElement("div");
+      head.className = "usage-tip-month";
+      head.textContent = month.label || "";
+      tip.appendChild(head);
+      [month.minutes_label, month.requests_label, month.spend_label].forEach((line) => {
+        const row = document.createElement("div");
+        row.className = "usage-tip-value";
+        row.textContent = line || "--";
+        tip.appendChild(row);
+      });
+      tip.hidden = false;
+
+      // Sit beside the hovered column, on whichever side has room, so the bar
+      // being described is never hidden underneath its own tooltip.
+      const wrapRect = wrap.getBoundingClientRect();
+      const trackRect = track.getBoundingClientRect();
+      const gap = 8;
+      const leftEdge = trackRect.left - wrapRect.left;
+      const rightEdge = trackRect.right - wrapRect.left;
+      const placeRight = leftEdge + trackRect.width / 2 < wrap.clientWidth / 2;
+      const desired = placeRight ? rightEdge + gap : leftEdge - tip.offsetWidth - gap;
+      const maxLeft = Math.max(0, wrap.clientWidth - tip.offsetWidth);
+      tip.style.left = Math.max(0, Math.min(desired, maxLeft)) + "px";
+    }
+
+    function clearChartActive() {
+      const active = document.querySelectorAll(".usage-bar-track.active");
+      for (const el of active) { el.classList.remove("active"); }
+      usageChartActiveIndex = null;
+    }
+
+    function hideChartTooltip() {
+      const tip = document.getElementById("usageChartTooltip");
+      if (tip) { tip.hidden = true; }
+      clearChartActive();
+    }
+
+    function toggleApiKeyVisibility() {
+      const input = document.getElementById("apiKey");
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      document.getElementById("eyeSlash").style.display = show ? "none" : "";
+    }
+    let statusTimer = null;
+    function setStatus(text, kind) {
+      const el = document.getElementById("statusToast");
+      el.textContent = text;
+      el.classList.remove("ok", "error", "show");
+      el.classList.add(kind === "error" ? "error" : "ok");
+      void el.offsetWidth;
+      el.classList.add("show");
+      if (statusTimer) clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => {
+        el.classList.remove("show");
+      }, 3000);
+    }
+    // ── Model dropdown ──
+    // "multi" only works on nova-3, so choosing it locks the model.
+    const MULTILINGUAL_LANGUAGE = "multi";
+    const MULTILINGUAL_MODEL = "nova-3";
+    let selectedModel = "{{MODEL}}";
+    let modelBeforeLock = null;
+
+    function isModelLocked() {
+      const language = cleanLanguageCode(document.getElementById("languageCode").value);
+      return language.toLowerCase() === MULTILINGUAL_LANGUAGE;
+    }
+    function setModelMenuOpen(open) {
+      const menu = document.getElementById("modelSelectMenu");
+      const btn = document.getElementById("modelSelectBtn");
+      menu.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      document.getElementById("modelSelect").classList.toggle("open", open);
+    }
+    function toggleModelMenu() {
+      if (isModelLocked()) return;
+      setModelMenuOpen(document.getElementById("modelSelectMenu").hidden);
+    }
+    function renderModel() {
+      document.getElementById("modelSelectValue").textContent = selectedModel;
+      for (const opt of document.querySelectorAll(".dropdown-option")) {
+        const on = opt.dataset.value === selectedModel;
+        opt.classList.toggle("selected", on);
+        opt.setAttribute("aria-selected", on ? "true" : "false");
+      }
+      const locked = isModelLocked();
+      const btn = document.getElementById("modelSelectBtn");
+      btn.disabled = locked;
+      document.getElementById("modelSelect").classList.toggle("locked", locked);
+      btn.title = locked ? "Locked to nova-3 because the language is multi" : "Speech model";
+      document.getElementById("modelLockHint").hidden = !locked;
+      if (locked) setModelMenuOpen(false);
+    }
+    function pickModel(value) {
+      selectedModel = value;
+      setModelMenuOpen(false);
+      renderModel();
+    }
+    // Keep the lock in sync as the language is typed, and restore the previous
+    // choice if the user moves away from "multi".
+    function syncModelLock() {
+      if (isModelLocked()) {
+        if (selectedModel !== MULTILINGUAL_MODEL) {
+          modelBeforeLock = selectedModel;
+          selectedModel = MULTILINGUAL_MODEL;
+        }
+      } else if (modelBeforeLock !== null) {
+        selectedModel = modelBeforeLock;
+        modelBeforeLock = null;
+      }
+      renderModel();
+    }
+
+    // People paste 'en' or "en" as often as en. Strip one matching quote pair so the
+    // field shows what actually gets saved; Rust normalizes again and is authoritative.
+    function cleanLanguageCode(raw) {
+      const trimmed = (raw || "").trim();
+      const pairs = [["'", "'"], ['"', '"'], ["`", "`"], ["‘", "’"], ["“", "”"], ["«", "»"]];
+      for (const [open, close] of pairs) {
+        if (trimmed.length >= 2 && trimmed.startsWith(open) && trimmed.endsWith(close)) {
+          return trimmed.slice(open.length, trimmed.length - close.length).trim();
+        }
+      }
+      return trimmed;
+    }
+    function saveApiKey() {
+      const key = document.getElementById("apiKey").value;
+      const languageInput = document.getElementById("languageCode");
+      const language = cleanLanguageCode(languageInput.value);
+      languageInput.value = language;
+      const maxRecordingMinutes = document.getElementById("maxRecordingMinutes").value.trim();
+      if (!/^[0-9]+$/.test(maxRecordingMinutes) || Number.parseInt(maxRecordingMinutes, 10) <= 0) {
+        setStatus("Auto-stop cap must be a whole number greater than 0.", "error");
+        return;
+      }
+      post({
+        cmd: "save_api_key",
+        api_key: key,
+        language: language,
+        model: selectedModel,
+        auto_stop_minutes: maxRecordingMinutes
+      });
+    }
+    function openLogFile() { post({ cmd: "open_log" }); }
+    function copyTranscripts() { post({ cmd: "copy_transcripts" }); }
+    function copyLastMessage() { post({ cmd: "copy_last_message" }); }
+    function openMacSetting(name) { post({ cmd: "open_mac_setting", setting: name }); }
+    function copyLanguageCodesLink() { post({ cmd: "copy_link", url: "https://developers.deepgram.com/docs/models-languages-overview" }); }
+    function saveHotkeys() {
+      const pasteModifier = document.getElementById("pasteModifierKey").value;
+      const pasteTrigger = document.getElementById("pasteTriggerKey").value;
+      const clipboardModifier = document.getElementById("clipboardModifierKey").value;
+      const clipboardTrigger = document.getElementById("clipboardTriggerKey").value;
+      post({
+        cmd: "save_hotkeys",
+        paste_modifier: pasteModifier,
+        paste_trigger: pasteTrigger,
+        clipboard_modifier: clipboardModifier,
+        clipboard_trigger: clipboardTrigger
+      });
+    }
+    function toggleHotkeyGuide() {
+      const guide = document.getElementById("hotkeyGuide");
+      const btn = document.getElementById("toggleHotkeyGuideBtn");
+      const showing = !guide.hidden;
+      guide.hidden = showing;
+      btn.textContent = showing ? "View valid key names" : "Hide key names";
+    }
+    function dragWindow() { post({ cmd: "window_drag" }); }
+    function minimizeWindow() { post({ cmd: "window_minimize" }); }
+    function toggleMaximizeWindow() { post({ cmd: "window_maximize_toggle" }); }
+    function closeWindow() { post({ cmd: "window_close" }); }
+    function openNoPasaNada(event) { event.preventDefault(); post({ cmd: "copy_link", url: "https://nopasanada.app" }); }
+    function quitApp() { post({ cmd: "quit" }); }
+    document.getElementById("hotkeysAccordion").addEventListener("toggle", (e) => {
+      document.getElementById("saveHotkeysBar").hidden = !e.target.open;
+    });
+    document.querySelector(".drag-strip").addEventListener("mousedown", (event) => {
+      if (event.target.closest(".window-controls")) return;
+      dragWindow();
+    });
+    document.querySelector(".header-row").addEventListener("mousedown", () => {
+      dragWindow();
+    });
+    document.getElementById("maxRecordingMinutes").addEventListener("input", (event) => {
+      event.target.value = event.target.value.replace(/\D+/g, "");
+    });
+    document.getElementById("languageCode").addEventListener("input", syncModelLock);
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("#modelSelect")) setModelMenuOpen(false);
+    });
+    document.getElementById("modelSelect").addEventListener("keydown", (event) => {
+      const options = [...document.querySelectorAll(".dropdown-option")];
+      const isOpen = !document.getElementById("modelSelectMenu").hidden;
+      if (event.key === "Escape") {
+        setModelMenuOpen(false);
+        document.getElementById("modelSelectBtn").focus();
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (isModelLocked()) return;
+        if (!isOpen) { setModelMenuOpen(true); options[0].focus(); return; }
+        const at = options.indexOf(document.activeElement);
+        const step = event.key === "ArrowDown" ? 1 : -1;
+        options[(at + step + options.length) % options.length].focus();
+      }
+    });
+    renderModel();
+    window.addEventListener("voicekeys-status", (event) => { setStatus(event.detail.message, event.detail.kind); });
+    // Rust is authoritative for the language code; show what it actually stored.
+    window.addEventListener("voicekeys-language-normalized", (event) => {
+      const language = (event.detail || {}).language;
+      if (language) { document.getElementById("languageCode").value = language; }
+    });
+    let bannerTimer = null;
+    function updateBanner(kind, message) {
+      const banner = document.getElementById("statusBanner");
+      const text = document.getElementById("statusBannerText");
+      text.textContent = message;
+      banner.className = "status-banner " + kind;
+      banner.hidden = false;
+      if (bannerTimer) { clearTimeout(bannerTimer); bannerTimer = null; }
+      if (kind === "success" || kind === "error" || kind === "info") {
+        bannerTimer = setTimeout(() => { banner.hidden = true; }, 4000);
+      }
+    }
+    window.addEventListener("voicekeys-banner", (event) => {
+      updateBanner(event.detail.kind, event.detail.message);
+    });
+    window.addEventListener("voicekeys-usage", (event) => {
+      const detail = event.detail || {};
+      setUsageLoading(false);
+      if (detail.state === "ok") {
+        hideUsageError();
+        setUsageValues({
+          period: detail.period || "Period: --",
+          minutes_used: detail.minutes_used || "--",
+          requests: detail.requests || "--",
+          spend: detail.spend || "--",
+          balance: detail.balance || "--"
+        });
+        showUsageNote(detail.note || "");
+        return;
+      }
+
+      showUsageNote("");
+      if (detail.message) {
+        showUsageError(detail.message);
+      }
+    });
+    window.addEventListener("voicekeys-usage-history", (event) => {
+      const detail = event.detail || {};
+      const range = document.getElementById("usageHistoryRange");
+      const errorEl = document.getElementById("usageHistoryError");
+      const noteEl = document.getElementById("usageHistoryNote");
+      errorEl.hidden = true;
+      noteEl.hidden = true;
+
+      if (detail.state !== "ok") {
+        range.textContent = "All time";
+        document.getElementById("usageChartWrap").hidden = true;
+        document.getElementById("usageChartPeak").hidden = true;
+        document.getElementById("usageHistoryEmpty").hidden = true;
+        errorEl.textContent = detail.message || "Could not load all-time usage.";
+        errorEl.hidden = false;
+        // Let the next expand retry instead of leaving the panel stuck.
+        usageHistoryRequested = false;
+        return;
+      }
+
+      range.textContent = detail.range_label || "All time";
+      document.getElementById("usageAllTimeMinutes").textContent = detail.total_minutes || "--";
+      document.getElementById("usageAllTimeRequests").textContent = detail.total_requests || "--";
+      document.getElementById("usageAllTimeSpend").textContent = detail.total_spend || "--";
+      if (detail.note) {
+        noteEl.textContent = detail.note;
+        noteEl.hidden = false;
+      }
+      renderUsageChart(Array.isArray(detail.months) ? detail.months : []);
+    });
+
+    (function initUsageChartHover() {
+      const scroll = document.querySelector(".usage-chart-scroll");
+      if (!scroll) return;
+      scroll.addEventListener("pointermove", (event) => {
+        const track = event.target.closest(".usage-bar-track");
+        if (track) { showChartTooltip(track); } else { hideChartTooltip(); }
+      });
+      scroll.addEventListener("pointerleave", hideChartTooltip);
+      scroll.addEventListener("scroll", hideChartTooltip);
+      // Keyboard reaches the same detail as hover.
+      scroll.addEventListener("focusin", (event) => {
+        const track = event.target.closest(".usage-bar-track");
+        if (track) { showChartTooltip(track); }
+      });
+      scroll.addEventListener("focusout", hideChartTooltip);
+    })();
+
+    setUsageValues({
+      period: "Period: --",
+      minutes_used: "--",
+      requests: "--",
+      spend: "--",
+      balance: "--"
+    });
+    refreshDeepgramUsage(false);
+    function showApiKeyHelp() {
+      document.getElementById("apiKeyHelpModal").classList.add("open");
+    }
+    function closeApiKeyHelp() {
+      document.getElementById("apiKeyHelpModal").classList.remove("open");
+    }
+  </script>
+
+  <div id="apiKeyHelpModal" class="modal-overlay" onclick="if(event.target===this)closeApiKeyHelp()">
+    <div class="modal-card">
+      <h3>Deepgram API Key</h3>
+      <p>Voice Keys uses <strong>Deepgram</strong> for speech-to-text. You need a free API key to get started:</p>
+      <ol>
+        <li>Create a free account at <a href="javascript:void(0)" onclick="post({cmd:'copy_link',url:'https://console.deepgram.com'})">console.deepgram.com</a>.</li>
+        <li>Go to <strong>API Keys</strong> and click <strong>Create a New API Key</strong>.</li>
+        <li>Copy the key and paste it above.</li>
+      </ol>
+      <p><strong>Tip:</strong> If you want to see usage metrics (minutes used, spend, balance) inside this app, create the key with <strong>Admin</strong> permissions.</p>
+      <div class="modal-actions">
+        <button onclick="closeApiKeyHelp()">Got it</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

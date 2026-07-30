@@ -1,0 +1,33 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Release packaging output — ship these as GitHub Release assets, not in the repo
+/dist/
+/dist-mac/
+
+# Local runtime state.
+# config.yaml holds your Deepgram API key in plaintext. Never commit it.
+# (config.example.yaml is intentionally not matched.)
+config.yaml
+.env
+.env.*
+
+# Logs: voicekeys.log, debug_keys.log
+*.log
+
+# Editors and local tooling
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+*~
+
+# One-off tooling output
+repomix-output.xml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

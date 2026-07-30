@@ -1,0 +1,26 @@
+# Copy to config.yaml and fill in your key, or just use the settings UI —
+# Voice Keys writes this file for you on first launch.
+#
+# config.yaml is gitignored because it holds a live API key. Keep it that way.
+deepgram:
+  api_key: YOUR_DEEPGRAM_API_KEY_HERE
+  model: nova-3
+  # A single language code (`en`, `pt-BR`, `fr-CA`), or `multi` for
+  # multilingual. Monolingual codes bill at a lower rate than `multi`.
+  language: en
+  punctuate: true
+  smart_format: true
+  timeout_secs: 10.0
+audio:
+  sample_rate: 16000
+  # Recording stops and transcribes automatically at this limit.
+  max_recording_minutes: 20
+# Each mode takes exactly two keys: hold the first, press the second.
+# Press the same pair again to stop.
+hotkeys:
+  paste:
+  - alt
+  - dot
+  clipboard:
+  - alt
+  - slash

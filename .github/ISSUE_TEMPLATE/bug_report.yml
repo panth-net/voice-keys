@@ -1,0 +1,82 @@
+name: Bug report
+description: Something isn't working
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please don't paste your Deepgram API key, and
+        skim any log excerpt before attaching it.
+
+        For security vulnerabilities, use
+        [SECURITY.md](https://github.com/panth-net/voice-keys/blob/main/SECURITY.md)
+        instead of a public issue.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Launch Voice Keys
+        2. Press ...
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS and version
+      placeholder: "macOS 15.2 / Windows 11 23H2 / Ubuntu 24.04 (X11)"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Voice Keys version
+      description: From the settings window, or `git rev-parse --short HEAD` if you built it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Built from source
+        - macOS .dmg
+        - Windows .zip
+        - Linux tarball / install-ubuntu.sh
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: macOS permissions (skip if not on macOS)
+      options:
+        - label: Accessibility is enabled for Voice Keys
+        - label: Input Monitoring is enabled for Voice Keys
+        - label: Microphone is enabled for Voice Keys
+        - label: The app I launched it from has the same permissions
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        For hotkeys that don't fire, run with `VOICEKEYS_DEBUG_KEYS=1` and paste
+        the output of `~/.config/voicekeys/debug_keys.log`.
+
+        Level `1` records only your bound hotkeys. Level `2` records *all* keys —
+        only use it if you're going to read the file before pasting it.
+      render: shell

@@ -1,0 +1,1044 @@
+/* Fonts are system stacks on purpose. Voice Keys makes no network request
+   other than to Deepgram, so there is no webfont CDN here — a settings window
+   that phones a third party every time it opens is not something an app
+   holding Input Monitoring should do. */
+
+:root {
+  color-scheme: light;
+  --pg-primary: #2d8659;
+  --pg-primary-hover: #236b47;
+  --pg-primary-light: #e8f5ef;
+  --pg-background: #ffffff;
+  --pg-foreground: #1a1a1a;
+  --pg-muted: #f8f9fa;
+  --pg-muted-foreground: #525252;
+  --pg-border: #d4d4d8;
+  --pg-card-border: #e4e4e7;
+  --pg-input-border: #d4d4d8;
+  --pg-hover-bg: #f4f4f5;
+  --pg-radius-md: 0.75rem;
+  --pg-radius-lg: 1rem;
+  --pg-transition-fast: 150ms cubic-bezier(0.42, 0, 1, 1);
+  --pg-transition-base: 200ms cubic-bezier(0.42, 0, 1, 1);
+  --pg-app-radius: 20px;
+  --pg-group-gap: 18px;
+  --pg-section-gap: 44px;
+  --pg-section-gap-lg: 54px;
+  --pg-utility-gap: 18px;
+  --pg-footer-gap: 10px;
+  --pg-running-minutes-color: #20543f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+/* Both transparent so the rounded .app-shell below shows the desktop at the
+   corners. The radius cannot live on <body>: a transparent root makes body's
+   background propagate to the canvas, which paints square and ignores it. */
+html,
+body {
+  background: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: hidden;
+}
+
+.app-shell {
+  height: 100%;
+  /* 10px top padding is the gap above the window controls. It has to live here
+     rather than as a negative margin on .drag-strip: the strip is position:sticky
+     with top:0, and a sticky box's constraint rect is reduced by its own margins,
+     which cancels any negative top margin out. */
+  padding: 10px 20px 34px;
+  font-size: 15px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--pg-foreground);
+  background: var(--pg-background);
+  border-radius: var(--pg-app-radius);
+  /* Scroll container + radius = in-flow descendants get clipped to the corners,
+     which is what rounds off the full-bleed drag strip. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.drag-strip {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* Horizontal margins cancel the shell's padding for a full-bleed strip. The top
+     gap comes from .app-shell's padding-top (see note there), not from here. */
+  margin: 0 -20px 8px;
+  padding: 6px 10px;
+  min-height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pg-background);
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-strip:active {
+  cursor: grabbing;
+}
+
+.drag-dots {
+  color: #a1a1aa;
+  font-size: 0.86rem;
+  letter-spacing: 4px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.window-controls {
+  position: absolute;
+  right: 12px;
+  top: 0;
+  transform: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-title {
+  margin: 0 0 24px;
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-weight: 300;
+  font-size: clamp(1.36rem, 2.4vw, 1.6rem);
+  line-height: 1.2;
+  color: var(--pg-foreground);
+}
+
+.status-banner {
+  margin: -8px 0 24px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  transition: opacity 200ms ease;
+}
+
+.status-banner.recording {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.status-banner.processing {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.status-banner.retry {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.status-banner.success {
+  background: #e8f5ef;
+  border-color: #4a9d6e;
+  color: #1a4d32;
+}
+
+.status-banner.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #9b1c1c;
+}
+
+.status-banner.info {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0c4a6e;
+}
+
+p {
+  margin: 0 0 12px;
+  color: var(--pg-muted-foreground);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.app-subtitle {
+  font-size: 0.76rem;
+}
+
+label {
+  display: block;
+  margin: 18px 0 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--pg-foreground);
+}
+
+label[for="apiKey"] {
+  margin-top: 26px;
+}
+
+input {
+  width: 100%;
+  height: 44px;
+  padding: 10px 16px;
+  border: 2px solid var(--pg-input-border);
+  border-radius: var(--pg-radius-md);
+  font-size: 0.88rem;
+  color: var(--pg-foreground);
+  background: #fff;
+  transition: border-color var(--pg-transition-fast), box-shadow var(--pg-transition-fast);
+}
+
+.input-icon-wrap {
+  position: relative;
+}
+
+.input-icon-wrap > input {
+  padding-right: 44px;
+}
+
+.input-icon-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #737373;
+  cursor: pointer;
+}
+
+.input-icon-btn:hover {
+  background: var(--pg-hover-bg);
+  color: var(--pg-foreground);
+}
+
+input::placeholder {
+  color: #737373;
+}
+
+input:hover {
+  border-color: #b8b8be;
+}
+
+input:focus-visible {
+  outline: none;
+  border-color: var(--pg-primary);
+  box-shadow: 0 0 0 4px var(--pg-primary-light);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.row.compact {
+  margin-top: 10px;
+}
+
+.field-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.field-col > label {
+  margin-top: 0;
+}
+
+.usage-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.usage-refresh-btn {
+  height: 34px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+}
+
+.usage-stats-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.usage-stat {
+  padding: 10px;
+  border: 1px solid var(--pg-border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.usage-stat-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--pg-muted-foreground);
+}
+
+.usage-stat > strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #1f3a2c;
+}
+
+.usage-note {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.usage-admin-hint {
+  margin: 0;
+  flex: 1 1 220px;
+  color: #2c5a45;
+}
+
+.usage-error {
+  margin-top: 10px;
+  margin-bottom: 0;
+  color: #9b1c1c;
+}
+
+/* ── All-time usage ("See even more") ── */
+.usage-more-row {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.usage-history-range {
+  margin-top: 12px;
+  margin-bottom: 0;
+  font-weight: 500;
+  color: var(--pg-foreground);
+}
+
+.usage-stats-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.usage-chart-peak {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.usage-chart-wrap {
+  position: relative;
+  margin-top: 10px;
+  padding: 12px 10px 8px;
+  border: 1px solid var(--pg-border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+/* Two years of months must fit without the page ever scrolling sideways. */
+.usage-chart-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.usage-chart-inner {
+  min-width: max-content;
+}
+
+.usage-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  /* Recessive hairline baseline; every bar grows from it. */
+  border-bottom: 1px solid var(--pg-border);
+}
+
+.usage-bar-track {
+  flex: 0 0 24px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  outline: none;
+}
+
+.usage-bar {
+  width: 100%;
+  min-height: 2px;
+  /* Rounded data-end, square where it meets the baseline. */
+  border-radius: 4px 4px 0 0;
+  background: var(--pg-primary);
+  transition: background var(--pg-transition-fast);
+}
+
+.usage-bar.empty {
+  background: var(--pg-border);
+}
+
+.usage-bar-track:hover > .usage-bar,
+.usage-bar-track.active > .usage-bar {
+  background: var(--pg-primary-hover);
+}
+
+.usage-bar-track:focus-visible > .usage-bar {
+  box-shadow: 0 0 0 2px var(--pg-primary-light);
+}
+
+.usage-chart-axis {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.usage-bar-label {
+  flex: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  color: var(--pg-muted-foreground);
+}
+
+.usage-bar-year {
+  font-weight: 500;
+  color: var(--pg-foreground);
+}
+
+.usage-chart-tooltip {
+  position: absolute;
+  top: 8px;
+  z-index: 5;
+  pointer-events: none;
+  padding: 6px 9px;
+  border: 1px solid var(--pg-border);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+}
+
+.usage-tip-month {
+  margin-bottom: 3px;
+  font-size: 0.68rem;
+  color: var(--pg-muted-foreground);
+}
+
+/* Values lead: the number is the high-contrast element, the month is secondary. */
+.usage-tip-value {
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--pg-foreground);
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 10px 20px;
+  border: 2px solid transparent;
+  border-radius: var(--pg-radius-md);
+  background: var(--pg-primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--pg-transition-fast);
+}
+
+button:hover {
+  background: var(--pg-primary-hover);
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--pg-primary-light);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+
+button.secondary:hover {
+  background: #1f2937;
+  border-color: #1f2937;
+}
+
+button.ghost {
+  background: #fff;
+  border-color: var(--pg-input-border);
+  border-width: 1px;
+  color: #111827;
+}
+
+button.ghost:hover {
+  background: var(--pg-hover-bg);
+  border-color: #b8b8be;
+}
+
+.window-control {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--pg-input-border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 0.88rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.window-control:hover {
+  background: var(--pg-hover-bg);
+  border-color: #b8b8be;
+}
+
+.window-control.close:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.fixed-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 20px;
+  background: var(--pg-background);
+  border-top: 1px solid var(--pg-card-border);
+  /* Fixed elements escape body's border-radius clip, so match it here. */
+  border-bottom-left-radius: var(--pg-app-radius);
+  border-bottom-right-radius: var(--pg-app-radius);
+  z-index: 99;
+}
+
+.fixed-bottom-bar > button {
+  width: 100%;
+}
+
+#statusToast {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translate(-50%, 12px);
+  opacity: 0;
+  z-index: 1000;
+  pointer-events: none;
+  max-width: min(92%, 560px);
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+#statusToast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#statusToast.ok {
+  background: #ecfdf3;
+  border-color: #86efac;
+  color: var(--pg-running-minutes-color);
+}
+
+#statusToast.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #9b1c1c;
+}
+
+details {
+  margin-top: 16px;
+  border: 1px solid var(--pg-border);
+  border-radius: var(--pg-radius-lg);
+  padding: 12px 14px;
+  background: var(--pg-muted);
+}
+
+summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--pg-foreground);
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--pg-muted-foreground);
+}
+
+.settings-label-row {
+  margin-top: 16px;
+  padding-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings-label-row > label {
+  margin: 0;
+}
+
+/* ── Model dropdown (custom: <select> popups can't be styled in WKWebView) ── */
+.settings-label-row-end {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dropdown {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--pg-input-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--pg-foreground);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dropdown-trigger:hover {
+  background: var(--pg-hover-bg);
+  border-color: #b8b8be;
+}
+
+.dropdown.open > .dropdown-trigger {
+  border-color: var(--pg-primary);
+  box-shadow: 0 0 0 3px var(--pg-primary-light);
+}
+
+.dropdown-trigger:disabled {
+  opacity: 1;
+  background: var(--pg-muted);
+  color: var(--pg-muted-foreground);
+  border-color: var(--pg-border);
+  cursor: not-allowed;
+}
+
+.dropdown-caret {
+  flex: 0 0 auto;
+  color: #737373;
+  transition: transform var(--pg-transition-fast);
+}
+
+.dropdown.open .dropdown-caret {
+  transform: rotate(180deg);
+}
+
+.dropdown.locked .dropdown-caret {
+  opacity: 0.4;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  min-width: 210px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--pg-border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.14);
+}
+
+/* display:flex above would otherwise beat the UA rule for [hidden]. */
+.dropdown-menu[hidden] {
+  display: none;
+}
+
+.dropdown-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  height: auto;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pg-foreground);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdown-option:hover {
+  background: var(--pg-hover-bg);
+}
+
+.dropdown-option.selected {
+  background: var(--pg-primary-light);
+}
+
+.dropdown-option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--pg-primary);
+}
+
+.dropdown-option-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.dropdown-option.selected > .dropdown-option-name {
+  color: var(--pg-primary-hover);
+}
+
+.dropdown-option-note {
+  font-size: 0.68rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--pg-muted-foreground);
+}
+
+.model-lock-hint {
+  margin-top: -6px;
+}
+
+.hotkey-label-row {
+  margin-top: 18px;
+  padding-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hotkey-label-row > label {
+  margin: 0;
+}
+
+.text-link-btn {
+  display: inline;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pg-primary);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  box-shadow: none;
+  transform: none;
+}
+
+.text-link-btn:hover {
+  background: transparent;
+  color: var(--pg-primary-hover);
+}
+
+/* Underlined text link in body-text black rather than the accent green. */
+.text-link-btn.subtle {
+  color: var(--pg-foreground);
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.text-link-btn.subtle:hover {
+  color: var(--pg-muted-foreground);
+}
+
+.text-link-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pg-primary-light);
+  border-radius: 3px;
+}
+
+.hotkey-guide {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--pg-border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+/* Keep instruction text consistent across setup and hotkey help blocks. */
+#hotkeyGuide p,
+#hotkeyGuide li,
+#setupAccordion p,
+#setupAccordion li {
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+#hotkeyGuide strong,
+#setupAccordion strong {
+  font-weight: 600;
+}
+
+#hotkeyGuide code,
+#setupAccordion code {
+  font-size: 1em;
+  font-weight: 400;
+}
+
+code {
+  font-family: inherit;
+  font-size: 0.9em;
+  font-weight: 500;
+  color: var(--pg-primary);
+  background: none;
+  padding: 0;
+}
+
+ul {
+  margin: 8px 0 10px;
+  padding-left: 16px;
+}
+
+li {
+  margin: 4px 0;
+  color: var(--pg-muted-foreground);
+}
+
+footer {
+  margin-top: 18px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: var(--pg-muted-foreground);
+}
+
+footer a {
+  color: var(--pg-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+footer a:hover {
+  color: var(--pg-primary-hover);
+}
+
+#deepgramUsageAccordion.ui-group {
+  margin-top: var(--pg-section-gap-lg);
+}
+
+#hotkeysAccordion.ui-group {
+  margin-top: var(--pg-group-gap);
+}
+
+#setupAccordion.ui-group {
+  margin-top: var(--pg-group-gap);
+}
+
+#logLinesRow.ui-group {
+  margin-top: var(--pg-section-gap);
+}
+
+footer.ui-group {
+  margin-top: var(--pg-footer-gap);
+  padding-bottom: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light;
+    --pg-background: #ffffff;
+    --pg-foreground: #1a1a1a;
+    --pg-muted: #f8f9fa;
+    --pg-muted-foreground: #525252;
+    --pg-border: #d4d4d8;
+    --pg-card-border: #e4e4e7;
+    --pg-input-border: #d4d4d8;
+    --pg-hover-bg: #f4f4f5;
+    --pg-running-minutes-color: #20543f;
+  }
+
+  /* html/body stay transparent here too, or they defeat the rounded corners. */
+  html,
+  body {
+    background: transparent !important;
+    color: var(--pg-foreground) !important;
+  }
+
+  .app-shell {
+    background: var(--pg-background) !important;
+    color: var(--pg-foreground) !important;
+  }
+
+  input {
+    background: #ffffff;
+    color: var(--pg-foreground);
+    border-color: var(--pg-input-border);
+  }
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  /* Fixed elements escape body's border-radius clip, so match it here. */
+  border-radius: var(--pg-app-radius);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-card {
+  background: var(--pg-background);
+  border: 1px solid var(--pg-card-border);
+  border-radius: var(--pg-radius-lg);
+  padding: 24px;
+  max-width: 440px;
+  width: 90%;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+}
+
+.modal-card h3 {
+  margin: 0 0 12px;
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.modal-card p,
+.modal-card li {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--pg-muted-foreground);
+}
+
+.modal-card ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.modal-card a {
+  color: var(--pg-primary);
+  text-decoration: underline;
+}
+
+.modal-actions {
+  margin-top: 16px;
+  text-align: right;
+}
+
+.modal-actions button {
+  min-width: 80px;
+}
+
+@media (max-width: 560px) {
+  :root {
+    --pg-group-gap: 16px;
+    --pg-section-gap: 36px;
+    --pg-section-gap-lg: 42px;
+    --pg-utility-gap: 16px;
+    --pg-footer-gap: 8px;
+  }
+
+  .app-shell {
+    /* Top padding stays 10px so the window controls keep their gap at every width. */
+    padding: 10px 14px 28px;
+  }
+
+  .drag-strip {
+    margin: 0 -14px 8px;
+  }
+
+  footer.ui-group {
+    padding-bottom: 14px;
+  }
+
+  .row > button {
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .window-controls {
+    gap: 4px;
+  }
+
+  .window-control {
+    width: 28px;
+    height: 28px;
+  }
+
+}
