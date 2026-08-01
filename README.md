@@ -1,6 +1,6 @@
 # Voice Keys
 
-Voice Keys is a desktop dictation app for macOS, Windows, and Linux.
+*Voice Keys is a desktop dictation app for macOS, Windows, and Linux.*
 
 Press a keyboard shortcut to start recording, speak, then press it again. The transcript is pasted into your selected textbox or, if you don't have a textbox selected, copied to your clipboard to paste wherever you want.
 
@@ -12,12 +12,12 @@ Press a keyboard shortcut to start recording, speak, then press it again. The tr
 A free account with [Deepgram](https://deepgram.com), the service that turns
 your speech into text. This is an industry standard in AI, it just doesn't have a consumer-facing app. Voice Keys is that bridge.
 
-At the time of writing, new accounts get $200 in free credit — around 45,000
+At the time of writing, new accounts get **$200 in free credit** — around 45,000
 minutes of transcription (for scale, that's roughly six times through the
 complete Harry Potter audiobooks, Stephen Fry narrating, end to end).
 
 1. Create an account [here](https://deepgram.com)
-2. Click API Keys -> Create New Key - > Advanced -> Change Role -> Admin (this role lets you see your usage) -> Create Key -> Copy your new key.
+2. Click **API Keys** -> **Create New Key** - > **Advanced** -> **Change Role** -> **Admin** (this role lets you see your usage) -> **Create Key** -> Copy your new key.
 3. Download Voice Keys for your computer from the
    [latest release](https://github.com/panth-net/voice-keys/releases/latest).
 4. Install it:
@@ -28,17 +28,18 @@ complete Harry Potter audiobooks, Stephen Fry narrating, end to end).
    - You can use a single language code like `en` or use `multi` for multilingual.
    - Nova-2 is their older model and is ~40-50% cheaper and is plenty good for transcription in English. For other languages, try Nova-2 first, but if it's not great, try Nova-3. For multilingual, you must use Nova-3.
 6. Click Save.
-7. If you haven't already done so, give Voice Keys permissions to use your microphone and keyboard shortcuts. Click *Permissions (Mac and Windows)* to see the instructions.
-8. Set your *Keyboard shortcuts*. `cmd + period` is a good choice on macOS. `alt + period` is a good choice on Windows but use whatever is best for you.
+7. If you haven't already done so, give Voice Keys permissions to use your microphone and keyboard shortcuts. Click **Permissions (Mac and Windows)** to see the instructions.
+8. Set your **Keyboard shortcuts**. `cmd + period` is a good choice on macOS. `alt + period` is a good choice on Windows but use whatever is best for you.
 9. Press your shortcut to start recording. During this time you can navigate your computer and do whatever you want. Press the same shortcut again to stop recording. The transcript is pasted into the textbox you have selected when the transcribing finishes or, if you don't have a textbox selected, is copied to your clipboard to paste wherever you want.
-10. If for some reason it didn't paste, click the *Copy last message* button to copy the last transcript to your clipboard.
+10. If for some reason it didn't paste, click the **Copy last message** button to copy the last transcript to your clipboard.
 
 ## Installing
 
 ### On a Mac, the first time you open it
 #### Issue you will encounter
-Mac will probably say something like *"Voice Keys can't be opened because
-Apple cannot check it for malicious software."*
+Mac will probably say something like:
+
+> *"Voice Keys can't be opened because Apple cannot check it for malicious software."*
 
 This is normal. It happens because we haven't paid Apple's yearly fee to have
 the app officially stamped. Here's how to get past it:
@@ -56,7 +57,9 @@ xattr -dr com.apple.quarantine "/Applications/Voice Keys.app"
 ```
 
 ### On a Windows PC, the first time you open it
-Windows will probably say something like *"Windows protected your PC."*
+Windows will probably say something like:
+
+> *"Windows protected your PC."*
 
 This is normal. It happens because we haven't paid Microsoft's yearly fee to have the app officially stamped. Here's how to get past it:
 
@@ -162,7 +165,7 @@ rm ~/.config/voicekeys/transcripts.txt
 
 ## Privacy
 
-Short version: your voice goes to Deepgram and nowhere else, and Voice Keys
+Short version: **your voice goes to Deepgram and nowhere else**, and Voice Keys
 doesn't watch what you type.
 
 The longer version:
