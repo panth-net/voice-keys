@@ -1,0 +1,36 @@
+# You don't normally need to touch this file — everything here can be changed
+# from the app's window. It's here in case you'd rather edit it by hand.
+#
+# To use it, copy it to config.yaml and fill in your key.
+#
+# Keep config.yaml to yourself: it has your Deepgram key in it, and anyone
+# with that key can use your Deepgram account.
+deepgram:
+  api_key: YOUR_DEEPGRAM_API_KEY_HERE
+  model: nova-3
+  # Use "en" for English, "pt-BR" for Brazilian Portuguese, and so on.
+  # Use "multi" if you switch between languages mid-sentence — but note that
+  # Deepgram charges more for "multi" than for a single language.
+  language: en
+  # Adds full stops and capital letters.
+  punctuate: true
+  # Tidies up things like dates, times and phone numbers.
+  smart_format: true
+  # How long to wait for Deepgram before giving up, in seconds.
+  timeout_secs: 10.0
+audio:
+  sample_rate: 16000
+  # If you forget to stop it, it stops on its own after this many minutes
+  # and writes out what it heard.
+  max_recording_minutes: 20
+# Each shortcut is two keys: hold the first, tap the second. Press the same
+# two again to stop. See the README for the full list of key names.
+hotkeys:
+  # Types your words into whatever app you're using.
+  paste:
+  - alt
+  - dot
+  # Puts your words on the clipboard instead.
+  clipboard:
+  - alt
+  - slash

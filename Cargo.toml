@@ -1,0 +1,52 @@
+[package]
+name = "voicekeys"
+version = "0.1.1"
+edition = "2021"
+# `&raw mut` in the macOS event-tap module requires 1.82.
+rust-version = "1.82"
+authors = ["Pantheon Network"]
+description = "Push-to-talk speech-to-text. Hold a hotkey, speak, and the Deepgram transcript is pasted into the focused app."
+license = "MIT"
+repository = "https://github.com/panth-net/voice-keys"
+homepage = "https://nopasanada.app/"
+readme = "README.md"
+keywords = ["speech-to-text", "dictation", "hotkey", "transcription", "tray"]
+categories = ["multimedia::audio", "accessibility"]
+# This is an application, not a library — never publish it to crates.io.
+publish = false
+
+[dependencies]
+rdev = "0.5"
+cpal = "0.15"
+arboard = "3"
+hound = "3.5"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+chrono = "0.4"
+log = "0.4"
+flexi_logger = "0.31"
+tao = "0.34"
+tray-icon = "0.21"
+# "transparent" is not a default feature, and without it WebViewBuilder::with_transparent
+# is a silent no-op — which leaves the webview opaque and hides the rounded corners.
+wry = { version = "0.54", features = ["transparent"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSObject", "NSProcessInfo"] }
+objc2-app-kit = { version = "0.3", features = ["NSWindow", "NSView", "NSResponder", "NSApplication", "NSMenu", "NSMenuItem", "NSRunningApplication"] }
+objc2-quartz-core = { version = "0.3", features = ["CALayer"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = ["Win32_Graphics_Dwm"] }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+winresource = "0.1"
+
+[profile.release]
+opt-level = "z"     # optimize for binary size
+lto = true
+codegen-units = 1
+strip = true

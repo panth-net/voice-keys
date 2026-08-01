@@ -1,0 +1,88 @@
+name: Something's not working
+description: Tell us what went wrong
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for letting us know. A few things before you start:
+
+        **Don't paste your Deepgram key here** — this page is public.
+
+        If you're attaching a log, have a quick read of it first to make sure
+        there's nothing in there you'd rather not share.
+
+        If you've found a security problem, please don't post it here. See
+        [SECURITY.md](https://github.com/panth-net/voice-keys/blob/main/SECURITY.md)
+        for how to tell us privately.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What went wrong?
+      description: And what did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: What did you do just before it happened?
+      description: Step by step, so we can try it ourselves.
+      placeholder: |
+        1. Opened Voice Keys
+        2. Pressed ...
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: What computer are you on?
+      placeholder: "macOS 15.2 / Windows 11 / Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Which version of Voice Keys?
+      description: You'll find it in the app's window.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you get Voice Keys?
+      options:
+        - Downloaded it for Mac
+        - Downloaded it for Windows
+        - Downloaded it for Linux
+        - Built it myself from the source code
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: If you're on a Mac, which permissions have you switched on?
+      description: Skip this if you're not on a Mac. They're in System Settings > Privacy & Security.
+      options:
+        - label: Microphone
+        - label: Input Monitoring
+        - label: Accessibility
+        - label: I opened Voice Keys from Terminal or a code editor, and gave that the same permissions
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Anything from the log?
+      description: |
+        In the app, click "Copy last 500 log lines" and paste it here.
+
+        If it's your keyboard shortcut that isn't working, there's a
+        step-by-step under "Checking the keyboard shortcut" in the README that
+        gets you more detail.
+      render: shell

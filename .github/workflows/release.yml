@@ -1,0 +1,111 @@
+name: Release
+
+# Push a tag to cut a release:
+#
+#   git tag v0.1.1 && git push origin v0.1.1
+#
+# workflow_dispatch is here so you can rehearse the whole build without
+# tagging — it produces the artifacts but publishes nothing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            pattern: dist/*.dmg
+          - os: windows-latest
+            pattern: dist/*.zip
+          - os: ubuntu-latest
+            pattern: dist/*.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Same list as CI, minus libnotify-bin: notify-send is a runtime tool,
+      # not a build dependency.
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libssl-dev \
+            libasound2-dev \
+            libx11-dev \
+            libxtst-dev \
+            libxdo-dev \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev
+
+      # bash on the Windows runner is Git Bash, so `uname -s` reports MINGW64
+      # and build-release.sh takes its Windows branch.
+      - name: Build release artifact
+        shell: bash
+        run: ./build-release.sh
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.os }}
+          path: ${{ matrix.pattern }}
+          if-no-files-found: error
+
+  publish:
+    name: publish release
+    needs: build
+    # Only a tag push publishes. A manual run stops after the builds above.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Quoted 'NOTES' so backticks and ** are passed through untouched.
+          cat > notes.md <<'NOTES'
+          Download the file for your computer below. Full instructions are
+          included inside each download.
+
+          **macOS** — the `.dmg`. One universal build for both Apple Silicon and
+          Intel Macs. It isn't notarised, so the first time you open it,
+          right-click the app and choose **Open**.
+
+          **Windows** — the `.zip`. Unpack it and run `install.bat`.
+
+          **Linux** — the `.tar.gz`. Built on Ubuntu 24.04, so it needs glibc
+          2.39 or newer. Designed for X11; shortcuts may be unreliable on Wayland.
+          NOTES
+
+          # Changelog link appended separately so $REPO expands.
+          echo "" >> notes.md
+          echo "See [CHANGELOG.md](https://github.com/$REPO/blob/main/CHANGELOG.md) for what changed." >> notes.md
+
+          gh release create "$TAG" \
+            --repo "$REPO" \
+            --title "Voice Keys $TAG" \
+            --notes-file notes.md \
+            artifacts/*
